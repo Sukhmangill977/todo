@@ -4,10 +4,10 @@ import bcrypt from 'bcryptjs';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
-import openaiRoutes from './routes/openai.route.js';
+
 import bodyParser from 'body-parser';
 import taskRoutes from './routes/task.js';
-import OpenAI from 'openai';
+
 
 dotenv.config();
 const app = express();
@@ -21,12 +21,10 @@ app.use(bodyParser.json());
 app.use(express.json());
 
 
-app.use('/api/openai', openaiRoutes);
 
 
-const openai = new OpenAI({
-  apiKey: process.env.REACT_APP_OPENAI_API_KEY,
-});
+
+
 
 
 // MongoDB Connection
