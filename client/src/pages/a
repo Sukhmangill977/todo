@@ -1,50 +1,69 @@
 import React, { useState, useEffect, useRef } from "react";
 import "./Dashboard.css";
+import AISummary from "../pages/AISummary";
 import predefinedSuggestions from "../utils/taskSuggestions.js";
 
 function Dashboard() {
   const token = localStorage.getItem("authToken");
   const decodedToken = JSON.parse(atob(token.split(".")[1]));
   const userId = decodedToken.id;
-  const username = decodedToken.username || decodedToken.name || "User";
-  const firstLetter = username.charAt(0).toUpperCase();
-
   const recognitionRef = useRef(null);
+  const suggestionRef = useRef(null);
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [quickNote, setQuickNote] = useState(() => localStorage.getItem("quickNote") || "");
-  const [menuActive, setMenuActive] = useState(false);
-  const [tasks, setTasks] = useState({ task: [], inProgress: [], complete: [] });
-  const [newTask, setNewTask] = useState({ title: "", priority: "Medium", deadline: "" });
+  const [quickNote, setQuickNote] = useState(() => {return localStorage.getItem("quickNote") || "";});
+  const [menuActive, setMenuActive] = useState(false); 
+  const [tasks, setTasks] = useState({task: [],inProgress: [],complete: [],});
+  const [newTask, setNewTask] = useState({title: "",priority: "Medium",deadline: "",});
   const [editingTask, setEditingTask] = useState(null);
+  const username = decodedToken.username || decodedToken.name || "User";
+  const firstLetter = username.charAt(0).toUpperCase();
+  const [task, setTask] = useState("");
+  const [steps, setSteps] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const [userTask, setUserTask] = useState("");
   const [taskSteps, setTaskSteps] = useState("");
 
-  const getTaskSteps = async () => {
-    if (!userTask.trim()) return;
+  const getSteps = async () => {
+    setLoading(true);
+    setError("");
+    setSteps("");
+
     try {
       const response = await fetch("http://localhost:5002/suggest-steps", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ task: userTask })
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ task }),
       });
+
       const data = await response.json();
-      setTaskSteps(data.steps);
-    } catch (error) {
-      console.error("Error fetching steps:", error);
-      setTaskSteps("❌ Failed to get suggestions.");
+      if (data.steps) {
+        setSteps(data.steps);
+      } else {
+        setError("Could not fetch steps.");
+      }
+    } catch (err) {
+      setError("Something went wrong. Try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleToggleMenu = () => setMenuActive(!menuActive);
+  useEffect(() => {
+      localStorage.setItem("quickNote", quickNote);
+    }, [quickNote]);
+  
+    const handleToggleMenu = () => {
+      setMenuActive(!menuActive);
+    };
 
   useEffect(() => {
-    localStorage.setItem("quickNote", quickNote);
-  }, [quickNote]);
-
-  useEffect(() => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
       const recognition = new SpeechRecognition();
       recognition.lang = "en-US";
@@ -54,30 +73,32 @@ function Dashboard() {
       recognition.onresult = (event) => {
         const transcript = event.results[0][0].transcript;
         if (editingTask) {
-          setEditingTask((prev) => ({ ...prev, title: prev.title + " " + transcript }));
+          setEditingTask((prev) => ({
+            ...prev,
+            title: prev.title + " " + transcript,
+          }));
         } else {
-          setNewTask((prev) => ({ ...prev, title: prev.title + " " + transcript }));
+          setNewTask((prev) => ({
+            ...prev,
+            title: prev.title + " " + transcript,
+          }));
         }
       };
 
-      recognition.onerror = (event) => console.error("Speech recognition error:", event.error);
+      recognition.onerror = (event) => {
+        console.error("Speech recognition error:", event.error);
+      };
 
       recognitionRef.current = recognition;
+    } else {
+      console.warn("Speech Recognition not supported in this browser.");
     }
   }, []);
 
-  const startSpeechRecognition = () => {
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.start();
-      } catch (e) {
-        console.error("Speech recognition failed to start:", e);
-      }
-    }
-  };
-
   useEffect(() => {
     const fetchTasks = async () => {
+      const token = localStorage.getItem("authToken");
+
       try {
         const res = await fetch(`http://localhost:5001/api/tasks/${userId}`, {
           headers: {
@@ -86,32 +107,41 @@ function Dashboard() {
           },
         });
 
-        if (!res.ok) throw new Error(await res.text());
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error(`Failed to fetch tasks: ${res.status} - ${errorText}`);
+          return; // Stop execution if not OK
+        }
 
         const data = await res.json();
-        const grouped = { task: [], inProgress: [], complete: [] };
-        data.forEach((t) => grouped[t.status]?.push(t));
+
+        if (!Array.isArray(data)) {
+          console.error("Expected array but got:", data);
+          return;
+        }
+
+        const grouped = {
+          task: [],
+          inProgress: [],
+          complete: [],
+        };
+
+        data.forEach((t) => {
+          if (grouped[t.status]) {
+            grouped[t.status].push(t);
+          }
+        });
+
         setTasks(grouped);
       } catch (error) {
         console.error("Error fetching tasks:", error);
       }
     };
+
     fetchTasks();
   }, []);
 
-  const handleInputChange = (e) => {
-    const value = e.target.value;
-    const filtered = predefinedSuggestions.filter(s => s.toLowerCase().includes(value.toLowerCase()));
-    setNewTask({ ...newTask, title: value });
-    setSuggestions(filtered);
-    setShowSuggestions(value.length > 0 && filtered.length > 0);
-  };
-
-  const selectSuggestion = (suggestion) => {
-    setNewTask({ ...newTask, title: suggestion });
-    setShowSuggestions(false);
-  };
-
+  // Add a new task
   const handleAddTask = async () => {
     if (newTask.title.trim() && newTask.deadline) {
       const payload = { ...newTask, status: "task", userId };
@@ -125,16 +155,37 @@ function Dashboard() {
       });
 
       const saved = await res.json();
-      setTasks((prev) => ({ ...prev, task: [...(prev.task || []), saved] }));
+      setTasks((prev) => ({
+        ...prev,
+        task: [...(prev?.task || []), saved],
+      }));
+
       setNewTask({ title: "", priority: "Medium", deadline: "" });
       setShowSuggestions(false);
     }
   };
 
-  const handleMoveTask = async (taskId, targetStatus) => {
-    const taskToUpdate = Object.values(tasks).flat().find(t => t._id === taskId);
-    if (!taskToUpdate) return;
+  const handleInputChange = (e) => {
+    const value = e.target.value;
+    const filtered = predefinedSuggestions.filter(s =>
+      s.toLowerCase().includes(value.toLowerCase())
+    );
+    setNewTask({ ...newTask, title: value });
+    setSuggestions(filtered);
+    setShowSuggestions(value.length > 0 && filtered.length > 0);
+  };
 
+  const selectSuggestion = (suggestion) => {
+    setNewTask({ ...newTask, title: suggestion });
+    setShowSuggestions(false);
+  };
+
+  // Move task to another section
+  const handleMoveTask = async (taskId, targetStatus) => {
+    const task = Object.values(tasks)
+      .flat()
+      .find((t) => t._id === taskId);
+    if (!task) return;
     const res = await fetch(`http://localhost:5001/api/tasks/${taskId}`, {
       method: "PUT",
       headers: {
@@ -146,48 +197,64 @@ function Dashboard() {
 
     const updated = await res.json();
     const updatedTasks = { task: [], inProgress: [], complete: [] };
-    Object.values(tasks).flat().forEach((t) => {
-      if (t._id === taskId) updatedTasks[updated.status].push(updated);
-      else updatedTasks[t.status].push(t);
-    });
+    Object.values(tasks)
+      .flat()
+      .forEach((t) => {
+        if (t._id === taskId) updatedTasks[updated.status].push(updated);
+        else updatedTasks[t.status].push(t);
+      });
     setTasks(updatedTasks);
   };
 
+  // Delete a task
   const handleDeleteTask = async (taskId) => {
     await fetch(`http://localhost:5001/api/tasks/${taskId}`, {
       method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     });
 
     const updated = { task: [], inProgress: [], complete: [] };
-    Object.values(tasks).flat().forEach((t) => {
-      if (t._id !== taskId) updated[t.status].push(t);
-    });
+    Object.values(tasks)
+      .flat()
+      .forEach((t) => {
+        if (t._id !== taskId) updated[t.status].push(t);
+      });
     setTasks(updated);
   };
 
-  const startEditing = (task, section) => setEditingTask({ ...task, section });
+  // Start editing a task
+  const startEditing = (task, section) => {
+    setEditingTask({ ...task, section });
+  };
 
+  // Update task
   const handleUpdateTask = async () => {
-    const res = await fetch(`http://localhost:5001/api/tasks/${editingTask._id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        title: editingTask.title,
-        priority: editingTask.priority,
-        deadline: editingTask.deadline,
-      }),
-    });
+    const res = await fetch(
+      `http://localhost:5001/api/tasks/${editingTask._id}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          title: editingTask.title,
+          priority: editingTask.priority,
+          deadline: editingTask.deadline,
+        }),
+      }
+    );
 
     const updated = await res.json();
     const updatedTasks = { task: [], inProgress: [], complete: [] };
-    Object.values(tasks).flat().forEach((t) => {
-      if (t._id === updated._id) updatedTasks[updated.status].push(updated);
-      else updatedTasks[t.status].push(t);
-    });
+    Object.values(tasks)
+      .flat()
+      .forEach((t) => {
+        if (t._id === updated._id) updatedTasks[updated.status].push(updated);
+        else updatedTasks[t.status].push(t);
+      });
     setTasks(updatedTasks);
     setEditingTask(null);
   };
@@ -205,20 +272,62 @@ function Dashboard() {
     return () => clearInterval(interval);
   }, [tasks]);
 
+  const sectionTitles = {
+    task: "📌 To Do",
+    inProgress: "⏳ In Progress",
+    complete: "✅ Completed",
+  };
+
+  const handleSignOut = () => {
+    localStorage.removeItem("authToken");
+    window.location.href = "/login"; // Redirect to login page
+  };
+
+  useEffect(() => {
+  localStorage.setItem("quickNote", quickNote);
+}, [quickNote]);
+
+  const startSpeechRecognition = () => {
+    if (!recognitionRef.current) {
+      console.warn("Speech recognition is not available");
+      return;
+    }
+    recognitionRef.current.start();
+  };
+
+  const stopSpeechRecognition = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+  };
+
   return (
     <div className="dashboard">
-      <h2>🧠 Task Dashboard</h2>
-      {/* Add the UI part here like input fields, buttons, and rendering tasks */}
-      {/* Input for AI suggestion */}
-      <div>
-        <input
-          type="text"
-          value={userTask}
-          onChange={(e) => setUserTask(e.target.value)}
-          placeholder="Enter your task..."
-        />
-        <button onClick={getTaskSteps}>Get Smart Steps</button>
-        {taskSteps && <div className="suggestions">{taskSteps}</div>}
+      <div className="dashboard-menu">
+        <div className="dashboard-menu-content">
+          <button className="menu-toggle-btn" onClick={handleToggleMenu}>
+            <span>{menuActive ? "Close" : "Menu"}</span>
+          </button>
+          {menuActive && (
+            <div className="menu-items">
+              {/* Menu items here */}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="dashboard-main">
+        <div className="sign-out">
+          <button className="sign-out-btn" onClick={handleSignOut}>Sign Out</button>
+        </div>
+        
+        <div className="user-profile">
+          <div className="user-initial">{firstLetter}</div>
+          <span className="username">{username}</span>
+        </div>
+        <div className="dashboard-content">
+          {/* Your existing dashboard content */}
+        </div>
       </div>
     </div>
   );

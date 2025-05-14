@@ -205,6 +205,10 @@ function Dashboard() {
       });
     setTasks(updatedTasks);
   };
+  const handleSignOut = () => {
+    localStorage.removeItem("authToken");
+    window.location.href = "/login"; // 
+  };
 
   // Delete a task
   const handleDeleteTask = async (taskId) => {
@@ -528,10 +532,15 @@ const getTaskSteps = async () => {
           </div>
           
         )}
+        <div className="dashboard-main">
+        <div className="sign-out">
+          <button className="sign-out-btn" onClick={handleSignOut}>Sign Out</button>
+        </div>
       </div>
     </div>
     </div>
     </div>   
+    </div>
   );
 }
 
