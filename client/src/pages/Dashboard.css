@@ -295,3 +295,23 @@ li:hover {
   transition: all 0.3s ease;
   z-index: 999;
 }
+.smart-task-assistant {
+  margin: 20px 0;
+}
+
+.smart-task-assistant input {
+  padding: 10px;
+  width: 300px;
+}
+
+.smart-task-assistant button {
+  padding: 10px;
+  margin-left: 10px;
+}
+
+.task-steps-output {
+  margin-top: 10px;
+  background: #f3f3f3;
+  padding: 15px;
+  border-radius: 5px;
+}

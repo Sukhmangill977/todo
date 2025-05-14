@@ -18,6 +18,40 @@ function Dashboard() {
   const [editingTask, setEditingTask] = useState(null);
   const username = decodedToken.username || decodedToken.name || "User";
   const firstLetter = username.charAt(0).toUpperCase();
+  const [task, setTask] = useState("");
+  const [steps, setSteps] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const [userTask, setUserTask] = useState("");
+  const [taskSteps, setTaskSteps] = useState("");
+
+  const getSteps = async () => {
+    setLoading(true);
+    setError("");
+    setSteps("");
+
+    try {
+      const response = await fetch("http://localhost:5002/suggest-steps", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ task }),
+      });
+
+      const data = await response.json();
+      if (data.steps) {
+        setSteps(data.steps);
+      } else {
+        setError("Could not fetch steps.");
+      }
+    } catch (err) {
+      setError("Something went wrong. Try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
       localStorage.setItem("quickNote", quickNote);
@@ -262,6 +296,27 @@ function Dashboard() {
       console.error("Speech recognition failed to start:", e);
     }
   };
+  // 🧠 AI Suggestion Logic
+// New state
+
+
+// Function to handle sending task
+const getTaskSteps = async () => {
+  if (!userTask.trim()) return;
+  try {
+    const response = await fetch("http://localhost:5002/suggest-steps", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ task: userTask })
+    });
+    const data = await response.json();
+    setTaskSteps(data.steps);
+  } catch (error) {
+    console.error("Error fetching steps:", error);
+    setTaskSteps("❌ Failed to get suggestions.");
+  }
+};
+
 
   return (
     <div className="dashboard">
@@ -434,17 +489,49 @@ function Dashboard() {
           </div>
         ))}
       </div>
-      <div className="quick-notes-box">
-        <h4>Quick Notes</h4>
-        <textarea
-          value={quickNote}
-          onChange={(e) => setQuickNote(e.target.value)}
-          placeholder="Write your notes..."
-          style={{ width: "100%", height: "200px" }}
-        ></textarea>
+      <div style={{ padding: "2rem", fontFamily: "Arial, sans-serif" }}>
+      <h2>🧠 Smart Task Assistant</h2>
+
+      <input
+        type="text"
+        placeholder="Enter a task like 'Build a to-do app in React'"
+        value={task}
+        onChange={(e) => setTask(e.target.value)}
+        style={{ width: "70%", padding: "0.5rem", marginBottom: "1rem" }}
+      />
+      <button
+        onClick={getSteps}
+        style={{
+          padding: "0.9rem 1rem",
+          marginLeft: "1rem",
+          cursor: "pointer",
+        }}
+      >
+        Suggest Steps
+      </button>
+      <div className="ai-steps">
+  {taskSteps.split("\n").map((line, idx) => (
+    <p key={idx}>{line}</p>
+  ))}
+</div>
+
+
+      <div style={{ marginTop: "2rem" }}>
+        {loading && <p>⏳ Thinking... Please wait.</p>}
+
+        {error && <p style={{ color: "red" }}>{error}</p>}
+
+        {steps && (
+          <div style={{ whiteSpace: "pre-wrap", marginTop: "1rem" }}>
+            <strong>Steps to complete:</strong>
+            <p>{steps}</p>
+          </div>
+          
+        )}
       </div>
     </div>
     </div>
+    </div>   
   );
 }
 
