@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import './Register.css';
+import backgroundImage from "../assets/2.jpg";
 
 const Register = () => {
   const [username, setUsername] = useState("");
@@ -33,6 +34,18 @@ const Register = () => {
   };
 
   return (
+  <div
+    style={{
+      backgroundImage: `url(${backgroundImage})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat',
+      minHeight: '100vh',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+    }}
+  >
     <div className="register-container">
       <h2>Register</h2>
       <form className="register-form" onSubmit={handleRegister}>
@@ -63,7 +76,9 @@ const Register = () => {
         <button type="submit" className="register-button">Register</button>
       </form>
     </div>
-  );
+  </div>
+);
+
 };
 
 export default Register;

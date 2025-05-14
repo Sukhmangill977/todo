@@ -295,6 +295,13 @@ li:hover {
   transition: all 0.3s ease;
   z-index: 999;
 }
+.dashboard {
+  background: url('../assets/3.jpg') no-repeat center center;
+  background-size: cover;
+  /* The rest of your styles remain the same */
+}
+
+
 .smart-task-assistant {
   margin: 20px 0;
 }

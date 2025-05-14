@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom'; // Add Link here
 import axios from 'axios';
 import './Login.css';
+import backgroundImage from "../assets/1.jpg";
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -35,6 +36,18 @@ function Login() {
   };
 
   return (
+  <div
+    style={{
+      backgroundImage: `url(${backgroundImage})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat',
+      minHeight: '100vh',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+    }}
+  >
     <div className="login-container">
       <h2>Login</h2>
       <form onSubmit={handleLogin}>
@@ -54,9 +67,11 @@ function Login() {
         />
         <button type="submit">Login</button>
       </form>
-      <p>Don't have an account? <Link to="/register">Register</Link></p> {/* Now Link is defined */}
+      <p>Don't have an account? <Link to="/register">Register</Link></p>
     </div>
-  );
+  </div>
+);
+
 }
 
 export default Login;
