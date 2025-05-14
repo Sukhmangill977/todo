@@ -183,7 +183,7 @@ li:hover {
 /* Quick Notes Box */
 .quick-notes-box {
   position: fixed;
-  top: 100px;
+  top: 140px; /* Changed from 100px to 140px */
   right: 20px;
   width: 250px;
   height: 300px;
@@ -206,8 +206,8 @@ li:hover {
 .hamburger-menu {
   display: none;
   position: fixed;
-  top: 20px;
-  right: 20px; /* Moved to right */
+  top: 70px; /* Changed from 20px to 70px */
+  right: 20px;
   z-index: 20;
   cursor: pointer;
 }
@@ -256,4 +256,42 @@ li:hover {
 
 .side-menu.active {
   left: 0;
+}
+.profile-icon {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background-color: #4a90e2;
+  color: white;
+  width: 40px;
+  height: 40px;
+  font-weight: bold;
+  font-size: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+  transition: background-color 0.3s ease;
+}
+
+.profile-icon:hover .tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+.tooltip {
+  position: absolute;
+  top: 50px;
+  right: 0;
+  background-color: black;
+  color: white;
+  padding: 4px 10px;
+  font-size: 14px;
+  border-radius: 5px;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  z-index: 999;
 }

@@ -16,7 +16,9 @@ function Dashboard() {
   const [tasks, setTasks] = useState({task: [],inProgress: [],complete: [],});
   const [newTask, setNewTask] = useState({title: "",priority: "Medium",deadline: "",});
   const [editingTask, setEditingTask] = useState(null);
-  
+  const username = decodedToken.username || decodedToken.name || "User";
+  const firstLetter = username.charAt(0).toUpperCase();
+
   useEffect(() => {
       localStorage.setItem("quickNote", quickNote);
     }, [quickNote]);
@@ -270,6 +272,10 @@ function Dashboard() {
         <div className="bar2"></div>
         <div className="bar3"></div>
       </div>
+<div className="profile-icon">
+  {firstLetter}
+  <div className="tooltip">{username}</div>
+</div>
 
       <div className={`side-menu ${menuActive ? "active" : ""}`}>
         <h3>Menu</h3>
