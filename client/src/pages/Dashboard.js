@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect,useRef } from "react";
 import "./Dashboard.css";
 import AISummary from "../pages/AISummary";
+
 
 function Dashboard() {
   const token = localStorage.getItem("authToken");
@@ -21,19 +22,65 @@ function Dashboard() {
   const [editingTask, setEditingTask] = useState(null);
 
   // Fetch tasks from backend
+const recognitionRef = useRef(null);
+const startSpeechRecognition = () => {
+  if (recognitionRef.current) {
+    recognitionRef.current.start();
+  }
+};
+
+useEffect(() => {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (SpeechRecognition) {
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      if (editingTask) {
+        setEditingTask(prev => ({ ...prev, title: prev.title + ' ' + transcript }));
+      } else {
+        setNewTask(prev => ({ ...prev, title: prev.title + ' ' + transcript }));
+      }
+    };
+
+    recognition.onerror = (event) => {
+      console.error("Speech recognition error:", event.error);
+    };
+
+    recognitionRef.current = recognition;
+  } else {
+    console.warn("Speech Recognition not supported in this browser.");
+  }
+}, []);
 
   useEffect(() => {
-    const fetchTasks = async () => {
-      const token = localStorage.getItem("authToken");
+  const fetchTasks = async () => {
+    const token = localStorage.getItem("authToken");
+
+    try {
       const res = await fetch(`http://localhost:5001/api/tasks/${userId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
       });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error(`Failed to fetch tasks: ${res.status} - ${errorText}`);
+        return; // Stop execution if not OK
+      }
+
       const data = await res.json();
 
-      // Group by status
+      if (!Array.isArray(data)) {
+        console.error("Expected array but got:", data);
+        return;
+      }
+
       const grouped = {
         task: [],
         inProgress: [],
@@ -47,12 +94,13 @@ function Dashboard() {
       });
 
       setTasks(grouped);
-    };
-    fetchTasks();
-  }, []);
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
+    }
+  };
 
-
-
+  fetchTasks();
+}, []);
 
   // Add a new task
   const handleAddTask = async () => {
@@ -182,16 +230,21 @@ function Dashboard() {
       <div className="task-form">
         <h3>{editingTask ? "Edit Task" : "Add New Task"}</h3>
         <div className="form-fields">
-          <input
-            type="text"
-            placeholder="Task Title"
-            value={editingTask ? editingTask.title : newTask.title}
-            onChange={(e) =>
-              editingTask
-                ? setEditingTask({ ...editingTask, title: e.target.value })
-                : setNewTask({ ...newTask, title: e.target.value })
-            }
-          />
+          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+  <input
+    type="text"
+    placeholder="Task Title"
+    value={editingTask ? editingTask.title : newTask.title}
+    onChange={(e) =>
+      editingTask
+        ? setEditingTask({ ...editingTask, title: e.target.value })
+        : setNewTask({ ...newTask, title: e.target.value })
+    }
+    style={{ flex: 1 }}
+  />
+  <button onClick={startSpeechRecognition} title="Speak Task Title">🎤</button>
+</div>
+
           <select
             value={editingTask ? editingTask.priority : newTask.priority}
             onChange={(e) =>
